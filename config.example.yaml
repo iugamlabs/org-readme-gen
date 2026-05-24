@@ -1,0 +1,28 @@
+# org-readme-gen 配置文件示例
+# 复制为 config.yaml 并根据需要修改
+
+llm:
+  provider: "openai"                 # openai | anthropic
+  model: "deepseek-chat"             # 模型名称
+  base_url: "https://api.deepseek.com/v1"  # OpenAI 兼容 API 地址（provider=openai 时必填）
+  api_key_env: "LLM_API_KEY"        # API key 的环境变量名，默认 LLM_API_KEY
+  max_tokens: 8192                   # 最大输出 token 数
+
+orgs:
+  - name: "star-plan"
+    audience: "public"               # public（面向开源社区）| internal（面向团队内部）
+    description: "致力于提供实用、轻量的小工具解决方案"
+    extra_instructions: ""           # 可选，追加给 LLM 的额外指示
+    output_branch: "master"          # 可选，默认 main
+
+  - name: "heyoungai"
+    audience: "internal"
+    description: "团队内部知识库"
+
+  - name: "djangostarter"
+    audience: "public"
+    description: "面向独立开发者与小团队的 AI 原生全栈框架"
+
+  - name: "star-blog"
+    audience: "public"
+    description: "现代化博客生态系统"
