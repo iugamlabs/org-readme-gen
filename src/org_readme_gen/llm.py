@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Iterator
 
 from rich.console import Console
+from rich.live import Live
+from rich.markdown import Markdown
+from rich.panel import Panel
 
 from org_readme_gen.models import LlmConfig, OrgConfig, RepoInfo
 
@@ -82,7 +86,7 @@ def _build_user_prompt(
     return "\n".join(lines)
 
 
-def _chat_openai(config: LlmConfig, system: str, user: str) -> str:
+def _stream_openai(config: LlmConfig, system: str, user: str) -> Iterator[str]:
     from openai import OpenAI
 
     api_key = os.environ.get(config.api_key_env, "")
@@ -90,18 +94,24 @@ def _chat_openai(config: LlmConfig, system: str, user: str) -> str:
         raise RuntimeError(f"请设置 {config.api_key_env} 环境变量")
 
     client = OpenAI(base_url=config.base_url or None, api_key=api_key)
-    resp = client.chat.completions.create(
+    stream = client.chat.completions.create(
         model=config.model,
         max_tokens=config.max_tokens,
+        stream=True,
         messages=[
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
     )
-    return resp.choices[0].message.content or ""
+    for chunk in stream:
+        if not chunk.choices:
+            continue
+        delta = chunk.choices[0].delta.content
+        if delta:
+            yield delta
 
 
-def _chat_anthropic(config: LlmConfig, system: str, user: str) -> str:
+def _stream_anthropic(config: LlmConfig, system: str, user: str) -> Iterator[str]:
     import anthropic
 
     api_key = os.environ.get(config.api_key_env, "")
@@ -109,13 +119,14 @@ def _chat_anthropic(config: LlmConfig, system: str, user: str) -> str:
         raise RuntimeError(f"请设置 {config.api_key_env} 环境变量")
 
     client = anthropic.Anthropic(api_key=api_key)
-    resp = client.messages.create(
+    with client.messages.stream(
         model=config.model,
         max_tokens=config.max_tokens,
         system=system,
         messages=[{"role": "user", "content": user}],
-    )
-    return resp.content[0].text
+    ) as stream:
+        for text in stream.text_stream:
+            yield text
 
 
 def generate_readme(
@@ -130,6 +141,18 @@ def generate_readme(
     console.print(f"  调用 LLM（{llm_config.provider}/{llm_config.model}）生成 README ...")
 
     if llm_config.provider == "anthropic":
-        return _chat_anthropic(llm_config, system, user)
+        stream_iter = _stream_anthropic(llm_config, system, user)
     else:
-        return _chat_openai(llm_config, system, user)
+        stream_iter = _stream_openai(llm_config, system, user)
+
+    content = ""
+    with Live(
+        Panel(Markdown(""), title="LLM 生成中", border_style="cyan"),
+        console=console,
+        refresh_per_second=8,
+    ) as live:
+        for chunk in stream_iter:
+            content += chunk
+            live.update(Panel(Markdown(content), title="LLM 生成中", border_style="cyan"))
+
+    return content
