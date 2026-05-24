@@ -36,7 +36,19 @@ query($org: String!, $after: String) {
 def _get_token() -> str:
     token = os.environ.get("GITHUB_TOKEN", "")
     if not token:
-        raise RuntimeError("请设置 GITHUB_TOKEN 环境变量")
+        import subprocess
+
+        result = subprocess.run(
+            ["gh", "auth", "token"],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0:
+            token = result.stdout.strip()
+    if not token:
+        raise RuntimeError(
+            "请设置 GITHUB_TOKEN 环境变量，或先运行 gh auth login 登录 GitHub CLI"
+        )
     return token
 
 
