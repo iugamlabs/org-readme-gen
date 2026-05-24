@@ -45,9 +45,14 @@ orgs:
     output_branch: "main"
 ```
 
-设置环境变量：
+设置环境变量（支持 `.env` 文件或 shell export）：
 
 ```bash
+# 方式一：创建 .env 文件（推荐）
+cp .env.example .env
+# 编辑 .env 填入你的密钥
+
+# 方式二：shell export
 export GITHUB_TOKEN="your-github-token"
 export LLM_API_KEY="your-llm-api-key"
 ```
