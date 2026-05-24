@@ -47,7 +47,7 @@ def _process_org(org_config: OrgConfig, llm_config, dry_run: bool) -> None:
     # 1. 获取仓库列表
     console.print("  获取仓库列表 ...")
     repos = get_org_repos(org_config.name)
-    active = [r for r in repos if not r.fork and not r.archived]
+    active = [r for r in repos if not r.fork and not r.archived and r.name != ".github"]
     console.print(f"  共 {len(repos)} 个仓库，{len(active)} 个活跃仓库")
 
     # 2. 补充无描述仓库的 README 摘要
