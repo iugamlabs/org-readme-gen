@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import time
 from collections.abc import Iterator
 
 from rich.console import Console
@@ -129,6 +130,11 @@ def _stream_anthropic(config: LlmConfig, system: str, user: str) -> Iterator[str
             yield text
 
 
+_MAX_RETRIES = 3
+_RETRY_DELAY = 5
+_TAIL_CHARS = 2000
+
+
 def generate_readme(
     llm_config: LlmConfig,
     org_config: OrgConfig,
@@ -140,23 +146,36 @@ def generate_readme(
 
     console.print(f"  调用 LLM（{llm_config.provider}/{llm_config.model}）生成 README ...")
 
-    if llm_config.provider == "anthropic":
-        stream_iter = _stream_anthropic(llm_config, system, user)
-    else:
-        stream_iter = _stream_openai(llm_config, system, user)
+    last_err: Exception | None = None
+    for attempt in range(1, _MAX_RETRIES + 1):
+        if llm_config.provider == "anthropic":
+            stream_iter = _stream_anthropic(llm_config, system, user)
+        else:
+            stream_iter = _stream_openai(llm_config, system, user)
 
-    content = ""
-    _TAIL_CHARS = 2000
-    with Live(
-        Panel(Markdown(""), title="LLM 生成中", border_style="cyan"),
-        console=console,
-        refresh_per_second=8,
-    ) as live:
-        for chunk in stream_iter:
-            content += chunk
-            tail = content[-_TAIL_CHARS:]
-            if len(content) > _TAIL_CHARS:
-                tail = "…" + tail
-            live.update(Panel(Markdown(tail), title="LLM 生成中", border_style="cyan"))
+        content = ""
+        try:
+            with Live(
+                Panel(Markdown(""), title="LLM 生成中", border_style="cyan"),
+                console=console,
+                refresh_per_second=8,
+            ) as live:
+                for chunk in stream_iter:
+                    content += chunk
+                    tail = content[-_TAIL_CHARS:]
+                    if len(content) > _TAIL_CHARS:
+                        tail = "…" + tail
+                    live.update(Panel(Markdown(tail), title="LLM 生成中", border_style="cyan"))
+            return content
+        except Exception as exc:
+            last_err = exc
+            console.print(
+                f"  [yellow]LLM 请求失败（第 {attempt}/{_MAX_RETRIES} 次）：{exc}[/]"
+            )
+            if attempt < _MAX_RETRIES:
+                console.print(f"  {_RETRY_DELAY} 秒后重试 ...")
+                time.sleep(_RETRY_DELAY)
 
-    return content
+    raise RuntimeError(
+        f"LLM 请求连续失败 {_MAX_RETRIES} 次，最后一次错误：{last_err}"
+    ) from last_err
