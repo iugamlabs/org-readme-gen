@@ -146,6 +146,7 @@ def generate_readme(
         stream_iter = _stream_openai(llm_config, system, user)
 
     content = ""
+    _TAIL_CHARS = 2000
     with Live(
         Panel(Markdown(""), title="LLM 生成中", border_style="cyan"),
         console=console,
@@ -153,6 +154,9 @@ def generate_readme(
     ) as live:
         for chunk in stream_iter:
             content += chunk
-            live.update(Panel(Markdown(content), title="LLM 生成中", border_style="cyan"))
+            tail = content[-_TAIL_CHARS:]
+            if len(content) > _TAIL_CHARS:
+                tail = "…" + tail
+            live.update(Panel(Markdown(tail), title="LLM 生成中", border_style="cyan"))
 
     return content
