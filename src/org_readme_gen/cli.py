@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from dotenv import load_dotenv
 import typer
 from rich.console import Console
 from rich.markdown import Markdown
@@ -103,4 +104,5 @@ def update(
 
 
 def main() -> None:
+    load_dotenv()
     app()
