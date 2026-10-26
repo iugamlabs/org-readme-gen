@@ -5,6 +5,7 @@ from pathlib import Path
 import yaml
 
 from org_readme_gen.models import AppConfig, LlmConfig, OrgConfig
+from org_readme_gen.github import profile_repo
 
 _CONFIG_SEARCH_PATHS = [
     Path("config.yaml"),
@@ -42,6 +43,8 @@ def load_config(path: Path) -> AppConfig:
 
     orgs: list[OrgConfig] = []
     for org_raw in raw.get("orgs", []):
+        # 配置拼写错误应在联网和调用模型前失败，不能悄悄降级到公开模式。
+        profile_repo(org_raw.get("audience", "public"))
         orgs.append(
             OrgConfig(
                 name=org_raw["name"],

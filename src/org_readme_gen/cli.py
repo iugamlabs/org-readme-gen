@@ -14,6 +14,7 @@ from org_readme_gen.github import (
     get_org_readme,
     get_org_repos,
     get_repo_readme,
+    profile_repo,
     update_readme,
 )
 from org_readme_gen.llm import generate_readme
@@ -44,17 +45,27 @@ def _enrich_repos(org: str, repos: list) -> None:
 def _process_org(org_config: OrgConfig, llm_config, dry_run: bool) -> None:
     console.print(Panel(f"[bold cyan]{org_config.name}[/]", subtitle=org_config.audience))
 
+    # 先验证受众，随后读取、生成、写入都使用同一个目标仓库。
+    target_repo = profile_repo(org_config.audience)
     # 1. 获取仓库列表
     console.print("  获取仓库列表 ...")
     repos = get_org_repos(org_config.name)
-    active = [r for r in repos if not r.fork and not r.archived and r.name != ".github"]
+    # 必须在读取摘要和调用 LLM 之前过滤，否则即使最终没展示，也已暴露内部内容。
+    active = [
+        r for r in repos
+        if not r.fork and not r.archived
+        and r.name not in {".github", ".github-private"}
+        and (org_config.audience == "internal" or not r.private)
+    ]
     console.print(f"  共 {len(repos)} 个仓库，{len(active)} 个活跃仓库")
 
     # 2. 补充无描述仓库的 README 摘要
     _enrich_repos(org_config.name, active)
 
     # 3. 获取现有 README
-    existing = get_org_readme(org_config.name)
+    existing = get_org_readme(
+        org_config.name, org_config.audience, org_config.output_branch,
+    )
     existing_content = existing[0] if existing else None
     existing_sha = existing[1] if existing else None
     if existing_content:
@@ -69,13 +80,14 @@ def _process_org(org_config: OrgConfig, llm_config, dry_run: bool) -> None:
         console.print(Markdown(content))
         console.print(f"\n[dim]（dry-run 模式，未推送到 GitHub）[/]")
     else:
-        ensure_github_repo(org_config.name, ".github")
+        ensure_github_repo(org_config.name, target_repo)
         commit_url = update_readme(
             org=org_config.name,
             content=content,
             sha=existing_sha,
             branch=org_config.output_branch,
             message=_README_MESSAGE,
+            audience=org_config.audience,
         )
         console.print(f"  [bold green]已更新[/] → {commit_url}")
 

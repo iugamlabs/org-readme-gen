@@ -64,7 +64,7 @@ export LLM_API_KEY="your-llm-api-key"
 org-readme-gen update
 
 # 只处理指定 org
-org-readme-gen update --org star-plan
+org-readme-gen update --org iugamlabs
 
 # 只生成不推送（预览）
 org-readme-gen update --dry-run
@@ -79,3 +79,13 @@ org-readme-gen update --config ./my-config.yaml
 |------|------|
 | `GITHUB_TOKEN` | GitHub Personal Access Token（需要 `repo` 和 `admin:org` 权限） |
 | `LLM_API_KEY` | LLM API Key（可通过配置文件 `api_key_env` 自定义变量名） |
+
+## 公开与内部主页
+
+`audience: public` 只把公开项目的元数据与摘要交给 LLM，读写 `.github`；`audience: internal` 可包含内部项目，读写私有的 `.github-private`。内容与 SHA 从 `output_branch` 的同一目标读取，不会跨仓库回退。`--dry-run` 不创建仓库或写入文件。
+
+受众必须是 `public` 或 `internal`。新建内部主页仓库会显式设为私有；现有目标若是公开仓库则拒绝写入。
+
+```bash
+uv run --group dev python -m unittest discover -s tests -v
+```
