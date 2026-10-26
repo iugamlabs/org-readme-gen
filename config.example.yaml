@@ -9,10 +9,10 @@ llm:
   max_tokens: 8192                   # 最大输出 token 数
 
 orgs:
-  - name: "star-plan"
+  - name: "iugamlabs"
     audience: "public"               # public（面向开源社区）| internal（面向团队内部）
-    description: "致力于提供实用、轻量的小工具解决方案"
-    extra_instructions: ""           # 可选，追加给 LLM 的额外指示
+    description: "iugam — 实用、轻量的开发者与效率工具 / Practical, lightweight tools for developers and everyday work"
+    extra_instructions: "主标题使用小写 iugam，GitHub 账号为 iugamlabs。提供完整中文和英文版本。名称来自潮州话中的油柑。只介绍传入的公开项目。"
     output_branch: "master"          # 可选，默认 main
 
   - name: "heyoungai"

@@ -14,6 +14,8 @@ class RepoInfo:
     fork: bool
     archived: bool
     readme_excerpt: str = ""
+    # 未提供可见性时按私有处理，避免旧调用方或不完整 API 响应把内部信息带到公开主页。
+    private: bool = True
 
 
 @dataclass(slots=True)
